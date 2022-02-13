@@ -13,7 +13,7 @@ test_file = './tests/test_data/midi/byzantineBlip_chorus.mid'
 
 mid = mido.MidiFile(test_file, clip=True)
 
-midi = replay.FxlMidi(bpm, fs)
+midi = replay.FxlMidiTrack(bpm, fs)
 midi.load_midi_file(test_file)
 
 # Note: The implementation of this test is a bit close to what is being tested,

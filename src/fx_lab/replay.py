@@ -12,7 +12,12 @@ class MissingCallbackError(Exception):
     """ Raise on missing an expected callback function """
 
 
-class FxlMidi:
+# TODO: Consider an event track base class adding replay capability
+
+
+# TODO: Break out load function
+# TODO: Split into MidiTrack and Bus (possibly MidiBus inheriting from Bus)
+class FxlMidiTrack:
     def __init__(self, bpm, fs):
         self.bpm = bpm
         self.fs = fs
@@ -58,7 +63,7 @@ class FxlMidi:
 
     def __getitem__(self, sample):
         if isinstance(sample, slice):
-            # TODO: Implement stride
+            # TODO: Implement stride?
             # TODO: Check negative slice indices
             ret = {}
             for sample_pos in range(sample.start, sample.stop):
@@ -84,7 +89,7 @@ class FxlMidi:
             self.events[sample] = [event]
 
 
-class FxlAudio:
+class FxlAudioTrack:
     def __init__(self):
         self.audio = {}
         self.length = 0
@@ -101,11 +106,11 @@ class FxlAudio:
 # TODO: Add buffer data class
 class ReplayBufferList:
     def __init__(self, buffer_size: int=None, callback: typing.Callable=None,
-                       midi: FxlMidi=None, audio: FxlAudio=None):
+                       midi: FxlMidiTrack=None, audio: FxlAudioTrack=None):
         assert callable(callback) or type(callback) in [type(None)], "callback should be function or None"
         assert type(buffer_size) in [int, type(None)], "buffer_size should be int or None"
-        assert type(midi) in [FxlMidi, type(None)], "midi should be FxlMidi or None"
-        assert type(audio) in [FxlAudio, type(None)], "audio should be FxlAudio or None"        
+        assert type(midi) in [FxlMidiTrack, type(None)], "midi should be FxlMidi or None"
+        assert type(audio) in [FxlAudioTrack, type(None)], "audio should be FxlAudio or None"        
         self.buffer_size = buffer_size
         self.callback = callback
         self.midi = midi

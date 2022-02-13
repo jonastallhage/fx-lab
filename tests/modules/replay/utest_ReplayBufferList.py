@@ -16,7 +16,7 @@ buffer_size = 10000
 test_file = './tests/test_data/midi/byzantineBlip_verse.mid'
 
 
-midi = replay.FxlMidi(bpm, fs)
+midi = replay.FxlMidiTrack(bpm, fs)
 # midi.load_midi_file(test_file)
 
 
