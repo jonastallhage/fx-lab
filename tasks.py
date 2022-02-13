@@ -16,13 +16,16 @@ def relpath_to_module(relpath):
 def test(context):
     print(context)
 
+
 @invoke.task
 def run_tests(context, test=None):
     if test == None:
-        # print(glob.glob(f'{MODULE_TESTS_PATH}/*/'))
         for directory in glob.glob(f'{MODULE_TESTS_PATH}/*/'):
             directory = directory.replace('\\', '/')
-            print(f'***********************************\nRUNNING TESTS IN: {directory}\n')
+            user_message = f'RUNNING TESTS IN: {directory}'
+            message_width =  len(user_message)
+            user_message = f'\n{"*"*message_width}\n{user_message}\n{"*"*message_width}\n'
+            print(user_message)
             for test_file in glob.glob(f'{directory}*.py'):
                 test_file = test_file.replace('\\', '/')
                 print(f'RUNNING: {test_file}')
@@ -31,13 +34,15 @@ def run_tests(context, test=None):
     else:
         test = test.replace('.', '/')
         test_path = f'{MODULE_TESTS_PATH}/{test}'
-        # print(test_path)
         if not(os.path.exists(test_path) or os.path.exists(f'{test_path}.py')):
             print(f'No directory or file named {test_path}')
             return
         if os.path.isdir(test_path):
             test_path = f'{test_path}/'
-            print(f'***********************************\nRUNNING TESTS IN: {test_path}\n')
+            user_message = f'RUNNING TESTS IN: {test_path}'
+            message_width =  len(user_message)
+            user_message = f'\n{"*"*message_width}\n{user_message}\n{"*"*message_width}\n'
+            print(user_message)
             for test_file in glob.glob(f'{test_path}*.py'):
                 test_file = test_file.replace('\\', '/')
                 print(f'RUNNING: {test_file}')
