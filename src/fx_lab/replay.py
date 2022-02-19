@@ -4,6 +4,7 @@ import typing
 import numpy as np
 import copy
 import os
+import abc
 
 
 logger = logging.getLogger(__name__)
@@ -51,6 +52,20 @@ def load_midi_file(filename, bpm, fs):
     return midi_bus
 
 
+class FxlTrack(abc.ABC):
+    @abc.abstractmethod
+    def __getitem__(self, sample):
+        pass
+
+    @abc.abstractmethod
+    def __setitem__(self, sample: int, value):
+        pass
+
+    @abc.abstractmethod
+    def __repr__(self):
+        pass
+
+
 # TODO: Maybe add a set_events function to set the entire events dict?
 class FxlMidiTrack:
     def __init__(self, track_name: str, bpm: typing.Union[int, float], fs: int):
@@ -64,6 +79,8 @@ class FxlMidiTrack:
         if isinstance(sample, slice):
             # TODO: Implement stride?
             # TODO: Check negative slice indices
+            # TODO: Consider adding offset and end values to access to avoid using copies and allow
+            #       accessing the values in the originating track through the slice
             events_dict = {}
             for sample_pos in range(sample.start, sample.stop):
                 if self.events.get(sample_pos):
@@ -73,6 +90,8 @@ class FxlMidiTrack:
             ret.events = events_dict
             return ret
         if isinstance(sample, int):
+            # TODO: If offset is used it should be here, should also affect any iteration methods
+            # TODO: Consider returning all events belonging to a certain MIDI channel here
             return copy.copy(self.events.get(sample))
         raise KeyError("key (sample) should be int or slice")
 
@@ -126,6 +145,7 @@ class FxlMidiBus:
             #     ret.add_track(ret_track)
             #     return ret
             if sample < self.n_tracks:
+                # TODO: Confusing var names, this returns a track
                 return self.tracks[sample]
             else:
                 raise KeyError("Tried to get nonexistent track")
@@ -167,18 +187,68 @@ class FxlAudioBus:
         pass
 
 
-class FxlAudioTrack:
-    def __init__(self):
-        self.audio = {}
-        self.length = 0
-        self.channels = 0
+class AudioDataLengthError(Exception):
+    """ Raise on unequal channel length in an audio track """
 
-    def set_audio(self, channel: int, audio: np.array):
+class AudioDataTypeError(Exception):
+    """ Raise on wrong data type for audio track channel data """
+
+
+class FxlAudioTrack(FxlTrack):
+    def __init__(self, name: str):
+        if not(isinstance(name, str)):
+            raise TypeError('name should be a str')
+        self.name = name
+        self.channels = {}
+        self.length = None
+        self.n_channels = 0
+
+    def set_channel(self, channel_nbr: int, channel_data: np.ndarray):
         # TODO: Improve
-        # TODO: Add length checks, all channels should be same length
-        self.audio[channel] = audio
-        self.length = length(audio)
-        self.channels = channel + 1
+        if not(isinstance(channel_data, np.ndarray)):
+            raise AudioDataTypeError("channel_data should be an np.ndarray")
+            return 
+        if not(self.length):
+            # No length set for track, just add the channel_data
+            self.length = len(channel_data)
+            self.channels[channel_nbr] = channel_data
+        else:
+            # Length already set for track, check that lengths match
+            if not(len(channel_data) == self.length):
+                raise AudioDataLengthError("All channels in audio track must have equal length")
+            self.channels[channel_nbr] = channel_data
+        self.n_channels = channel_nbr + 1
+
+    def add_channel(self, channel_data: np.ndarray):
+        self.set_channel(self.n_channels, channel_data)
+    
+    def __getitem__(self, sample):
+        if isinstance(sample, slice):
+            start = 0 if sample.start == None else sample.start
+            stop = self.length if sample.stop == None else sample.stop
+            step = 1 if sample.step == None else sample.step
+            # TODO: Add checks on slice values
+            if not(start >= 0):
+                raise IndexError('index out of range')
+            retval = FxlAudioTrack(self.name)
+            for channel in self.channels.values():
+                retval.add_channel(copy.copy(channel[start:stop:step]))
+            return retval
+        if isinstance(sample, int):
+            if not(sample >= 0 and sample < self.length):
+                raise IndexError('index out of range')
+            # TODO: Would it be possible to return references here in case we wish to allow changes
+            #       to parent through the slices etc.?
+            # TODO: Consider if we should return channels here instead, might be confusing to return samples
+            retval = [x[sample] for x in self.channels.values()]
+            return retval
+        raise KeyError("key (sample) should be int or slice")
+
+    def __setitem__(self, sample: int, event):
+        pass
+
+    def __repr__(self):
+        return f'FxlAudioTrack, name: {self.name}, n_channels: {self.n_channels}, length: {self.length}'
 
 
 
